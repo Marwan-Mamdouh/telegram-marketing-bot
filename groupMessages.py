@@ -21,9 +21,9 @@ def messageHandler(message, bot, ADMIN_IDS, productRepository, user_states, SHIP
                 bot.reply_to(message, response)
                 return
 
-        # Case 2: search by product NAME
+        # Case 2: fuzzy search by NAME (Arabic friendly)
         else:
-            product = productRepository.get_product_by_name(text)
+            product = productRepository.search_product_by_name(text)
             if product:
                 response = f"معلومات عن {product[1]}:\n" \
                     f"الوصف: {product[2]}\n" \
