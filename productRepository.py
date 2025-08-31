@@ -29,28 +29,15 @@ def insert_sample_products() -> None:
     conn = sqlite3.connect("store.db")
     cursor = conn.cursor()
     products = [
-        ("المنتج أ", "هذا منتج رائع لتلبية جميع احتياجاتك.",
-         19.99, "https://yourstore.com/productA", 15),
-        ("المنتج ب", "المنتج ب يقدم جودة وقيمة ممتازة.",
-         29.99, "https://yourstore.com/productB", 7),
+        ("تيشرت بولو اسود", "هذا منتج رائع لتلبية جميع احتياجاتك.",
+         19.99, "https://yourstore.com/productA"),
+        ("قميص كوم اسود", "المنتج ب يقدم جودة وقيمة ممتازة.",
+         29.99, "https://yourstore.com/productB"),
     ]
     cursor.executemany(
-        "INSERT INTO products (name, description, price, link, stock) VALUES (?, ?, ?, ?, ?)", products)
+        "INSERT INTO products (name, description, price, link) VALUES (?, ?, ?, ?)", products)
     conn.commit()
     conn.close()
-
-# Fetch all products
-
-
-# def get_all_products() -> list:
-#     conn = sqlite3.connect("store.db")
-#     cursor = conn.cursor()
-#     cursor.execute("SELECT id, name, price FROM products")
-#     rows = cursor.fetchall()
-#     conn.close()
-#     return rows
-
-# Fetch single product by id
 
 
 def get_product(prod_id: str):
@@ -78,6 +65,7 @@ def normalize_arabic(text: str) -> str:
 
 
 # === FETCH PRODUCTS ===
+# Fetch all products
 def get_all_products() -> list:
     conn = sqlite3.connect("store.db")
     cursor = conn.cursor()
@@ -87,32 +75,31 @@ def get_all_products() -> list:
     return rows
 
 
-# === SEARCH PRODUCT BY NAME (FUZZY) ===
-def search_product_by_name(query: str, limit: int = 1):
+# === SEARCH PRODUCTS BY NAME (FUZZY, MULTIPLE) ===
+def search_products_by_name(query: str, limit: int = 5, threshold: int = 60):
     products = get_all_products()
     if not products:
-        return None
+        return []
 
     query_norm = normalize_arabic(query)
-    # Make list of normalized product names
     product_names = [(p[0], normalize_arabic(p[1]), p) for p in products]
 
-    # Use RapidFuzz to get best match
-    matches = process.extract(query_norm,
-                              {pid: name for pid, name, _ in product_names},
-                              scorer=fuzz.partial_ratio,
-                              limit=limit)
+    # Create {id: normalized_name}
+    lookup = {pid: name for pid, name, _ in product_names}
 
-    if not matches:
-        return None
+    # Fuzzy match
+    matches = process.extract(
+        query_norm,
+        lookup,
+        scorer=fuzz.partial_ratio,
+        limit=limit
+    )
 
-    # matches = [(matched_text, score, product_id)]
-    best_match = matches[0]
-    best_score = best_match[1]
-    best_pid = best_match[2]
+    results = []
+    for _, score, pid in matches:
+        if score >= threshold:  # accept only if score is high enough
+            for real_pid, _, product in product_names:
+                if real_pid == pid:
+                    results.append(product)
 
-    if best_score > 60:  # threshold (tweakable)
-        for pid, _, product in product_names:
-            if pid == best_pid:
-                return product
-    return None
+    return results

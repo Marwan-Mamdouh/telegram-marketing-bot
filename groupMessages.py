@@ -21,15 +21,16 @@ def messageHandler(message, bot, ADMIN_IDS, productRepository, user_states, SHIP
                 bot.reply_to(message, response)
                 return
 
-        # Case 2: fuzzy search by NAME (Arabic friendly)
+        # Case 2: fuzzy search by NAME (Arabic friendly, multiple matches)
         else:
-            product = productRepository.search_product_by_name(text)
-            if product:
-                response = f"معلومات عن {product[1]}:\n" \
-                    f"الوصف: {product[2]}\n" \
-                    f"السعر: {product[3]}$\n" \
-                    f"رابط الشراء: {product[4]}"
-                bot.reply_to(message, response)
+            products = productRepository.search_products_by_name(text)
+            if products:
+                for product in products:
+                    response = f"معلومات عن {product[1]}:\n" \
+                        f"الوصف: {product[2]}\n" \
+                        f"السعر: {product[3]}$\n" \
+                        f"رابط الشراء: {product[4]}"
+                    bot.reply_to(message, response)
                 return
 
     # Start order

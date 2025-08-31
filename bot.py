@@ -75,6 +75,6 @@ def handle_message(message) -> None:
 if __name__ == '__main__':
     print("Bot is running...")
     productRepository.init_db()
-    # insert_sample_products()  # Uncomment only on first run
+    # productRepository.insert_sample_products()  # Uncomment only on first run
     # send_offers()
     bot.infinity_polling()
