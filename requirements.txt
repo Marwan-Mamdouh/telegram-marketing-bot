@@ -1,0 +1,5 @@
+telebot
+dotenv
+rapidfuzz
+numpy
+sentence_transformers

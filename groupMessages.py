@@ -1,4 +1,7 @@
-def messageHandler(message, bot, ADMIN_IDS, productRepository, user_states, SHIPPING_FEE) -> None:
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+
+def messageHandler(message, bot, ADMIN_IDS: list, productRepository, user_states: dict, SHIPPING_FEE: float) -> None:
     chat_type = message.chat.type
     user_id = message.from_user.id
     text = message.text.strip()
@@ -14,23 +17,19 @@ def messageHandler(message, bot, ADMIN_IDS, productRepository, user_states, SHIP
         if text.isdigit():
             product = productRepository.get_product(int(text))
             if product:
-                response = f"معلومات عن {product[1]}:\n" \
-                    f"الوصف: {product[2]}\n" \
-                    f"السعر: {product[3]}$\n" \
-                    f"رابط الشراء: {product[4]}"
-                bot.reply_to(message, response)
+                send_product_with_buttons(bot, message.chat.id, product)
                 return
 
-        # Case 2: fuzzy search by NAME (Arabic friendly, multiple matches)
+            # Case 2: fuzzy search by NAME (Arabic friendly, multiple matches)
+            # Case 2: semantic search (NLP embeddings)
         else:
-            products = productRepository.search_products_by_name(text)
+            products = productRepository.semantic_search(text)
+            if not products:
+                products = productRepository.search_products_by_name(text)
+
             if products:
                 for product in products:
-                    response = f"معلومات عن {product[1]}:\n" \
-                        f"الوصف: {product[2]}\n" \
-                        f"السعر: {product[3]}$\n" \
-                        f"رابط الشراء: {product[4]}"
-                    bot.reply_to(message, response)
+                    send_product_with_buttons(bot, message.chat.id, product)
                 return
 
     # Start order
@@ -92,3 +91,26 @@ def messageHandler(message, bot, ADMIN_IDS, productRepository, user_states, SHIP
             bot.reply_to(message, confirmation)
             del user_states[user_id]
             return
+
+# ----------------------------------------------------------------------
+
+
+def send_product_with_buttons(bot, chat_id, product):
+    """
+    Send product info with InlineKeyboard buttons
+    """
+    response = f"📦 {product[1]}\n" \
+        f"الوصف: {product[2]}\n" \
+        f"السعر: {product[3]}$"
+
+    keyboard = InlineKeyboardMarkup()
+    keyboard.add(
+        InlineKeyboardButton("🛒 شراء الآن", callback_data=f"buy_{product[0]}"),
+        InlineKeyboardButton("🔗 رابط المنتج", url=product[4])
+    )
+    keyboard.add(
+        InlineKeyboardButton(
+            "🎯 منتجات مشابهة", callback_data=f"similar_{product[0]}")
+    )
+
+    bot.send_message(chat_id, response, reply_markup=keyboard)

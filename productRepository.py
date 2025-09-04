@@ -1,6 +1,15 @@
 import sqlite3
 import re
 from rapidfuzz import fuzz, process
+from sentence_transformers import SentenceTransformer, util
+# import numpy as np
+
+# === LOAD NLP MODEL ===
+model = SentenceTransformer(
+    "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+
+# Cache embeddings (to avoid recomputing each search)
+product_cache = {}
 
 # === DATABASE SETUP ===
 
@@ -76,6 +85,43 @@ def get_all_products() -> list:
 
 
 # === SEARCH PRODUCTS BY NAME (FUZZY, MULTIPLE) ===
+def build_product_cache():
+    """
+    Precompute embeddings for all products and store in memory
+    """
+    global product_cache
+    products = get_all_products()
+    product_cache = {}
+
+    texts = [f"{p[1]} {p[2]}" for p in products]  # name + description
+    embeddings = model.encode(texts, convert_to_tensor=True)
+
+    for i, product in enumerate(products):
+        product_cache[product[0]] = {
+            "product": product,
+            "embedding": embeddings[i]
+        }
+
+
+def semantic_search(query: str, top_k: int = 5, threshold: float = 0.45):
+    """
+    Search products using semantic similarity
+    """
+    if not product_cache:  # Build cache if empty
+        build_product_cache()
+
+    query_emb = model.encode(query, convert_to_tensor=True)
+    results = []
+
+    for pid, data in product_cache.items():
+        score = util.cos_sim(query_emb, data["embedding"]).item()
+        if score >= threshold:
+            results.append((score, data["product"]))
+
+    results.sort(key=lambda x: x[0], reverse=True)
+    return [p for _, p in results[:top_k]]
+
+
 def search_products_by_name(query: str, limit: int = 5, threshold: int = 60):
     products = get_all_products()
     if not products:

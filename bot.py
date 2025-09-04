@@ -71,6 +71,43 @@ def handle_message(message) -> None:
         message, bot, ADMIN_IDS, productRepository, user_states, SHIPPING_FEE)
 
 
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler(call):
+    user_id = call.from_user.id
+    chat_id = call.message.chat.id
+    data = call.data
+
+    if data.startswith("buy_"):
+        prod_id = int(data.split("_")[1])
+        product = productRepository.get_product(prod_id)
+        if product:
+            bot.answer_callback_query(call.id, "تم اختيار المنتج ✅")
+            bot.send_message(chat_id, f"👍 جاري بدء طلب {product[1]}")
+            # put user in order state
+            user_states[user_id] = {'state': 'waiting_for_quantity', 'data': {
+                'product_id': product[0],
+                'product_name': product[1],
+                'price': product[3]
+            }}
+            bot.send_message(chat_id, "كم عدد الوحدات التي تريد (مثال: 1, 2)؟")
+
+    elif data.startswith("similar_"):
+        prod_id = int(data.split("_")[1])
+        product = productRepository.get_product(prod_id)
+        if product:
+            query = product[1]  # search by product name
+            related = productRepository.semantic_search(query)
+            related = [p for p in related if p[0] != prod_id]  # exclude self
+            if related:
+                bot.answer_callback_query(call.id, "منتجات مشابهة 🎯")
+                for rel in related[:3]:
+                    groupMessages.send_product_with_buttons(
+                        bot, chat_id, rel)
+            else:
+                bot.answer_callback_query(
+                    call.id, "لا يوجد منتجات مشابهة حالياً")
+
+
 # === MAIN ===
 if __name__ == '__main__':
     print("Bot is running...")
