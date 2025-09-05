@@ -5,11 +5,11 @@ from sentence_transformers import SentenceTransformer, util
 # import numpy as np
 
 # === LOAD NLP MODEL ===
-model = SentenceTransformer(
+model: SentenceTransformer = SentenceTransformer(
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 # Cache embeddings (to avoid recomputing each search)
-product_cache = {}
+product_cache: dict = {}
 
 # === DATABASE SETUP ===
 
@@ -85,7 +85,7 @@ def get_all_products() -> list:
 
 
 # === SEARCH PRODUCTS BY NAME (FUZZY, MULTIPLE) ===
-def build_product_cache():
+def build_product_cache() -> None:
     """
     Precompute embeddings for all products and store in memory
     """
@@ -103,7 +103,7 @@ def build_product_cache():
         }
 
 
-def semantic_search(query: str, top_k: int = 5, threshold: float = 0.45):
+def semantic_search(query: str, top_k: int = 5, threshold: float = 0.45) -> list:
     """
     Search products using semantic similarity
     """
@@ -122,16 +122,16 @@ def semantic_search(query: str, top_k: int = 5, threshold: float = 0.45):
     return [p for _, p in results[:top_k]]
 
 
-def search_products_by_name(query: str, limit: int = 5, threshold: int = 60):
-    products = get_all_products()
+def search_products_by_name(query: str, limit: int = 5, threshold: int = 60) -> list:
+    products: list = get_all_products()
     if not products:
         return []
 
-    query_norm = normalize_arabic(query)
-    product_names = [(p[0], normalize_arabic(p[1]), p) for p in products]
+    query_norm: str = normalize_arabic(query)
+    product_names: list = [(p[0], normalize_arabic(p[1]), p) for p in products]
 
     # Create {id: normalized_name}
-    lookup = {pid: name for pid, name, _ in product_names}
+    lookup: dict = {pid: name for pid, name, _ in product_names}
 
     # Fuzzy match
     matches = process.extract(
@@ -141,7 +141,7 @@ def search_products_by_name(query: str, limit: int = 5, threshold: int = 60):
         limit=limit
     )
 
-    results = []
+    results: list = []
     for _, score, pid in matches:
         if score >= threshold:  # accept only if score is high enough
             for real_pid, _, product in product_names:
