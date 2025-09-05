@@ -114,3 +114,36 @@ def send_product_with_buttons(bot, chat_id, product):
     )
 
     bot.send_message(chat_id, response, reply_markup=keyboard)
+
+
+def send_products_page(bot, chat_id, products, page=0, page_size=5, query=""):
+    """
+    Send a paginated list of products with navigation buttons.
+    """
+    start = page * page_size
+    end = start + page_size
+    current_page_products = products[start:end]
+
+    if not current_page_products:
+        bot.send_message(chat_id, "❌ لا يوجد منتجات في هذه الصفحة")
+        return
+
+    # Send each product in the page
+    for product in current_page_products:
+        send_product_with_buttons(bot, chat_id, product)
+
+    # Build navigation keyboard
+    nav_keyboard = InlineKeyboardMarkup()
+    buttons = []
+
+    if page > 0:
+        buttons.append(InlineKeyboardButton(
+            "◀️ السابق", callback_data=f"prev_page_{page-1}_{query}"))
+    if end < len(products):
+        buttons.append(InlineKeyboardButton(
+            "التالي ▶️", callback_data=f"next_page_{page+1}_{query}"))
+
+    if buttons:
+        nav_keyboard.row(*buttons)
+        bot.send_message(
+            chat_id, f"📄 صفحة {page+1} من {((len(products)-1)//page_size)+1}", reply_markup=nav_keyboard)

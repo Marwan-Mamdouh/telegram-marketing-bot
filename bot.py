@@ -1,6 +1,7 @@
 import telebot
 import re
 import productRepository
+import sessionRepository
 import privateMessages
 import groupMessages
 import threading
@@ -84,6 +85,7 @@ def callback_handler(call):
             bot.answer_callback_query(call.id, "تم اختيار المنتج ✅")
             bot.send_message(chat_id, f"👍 جاري بدء طلب {product[1]}")
             # put user in order state
+            # sessionRepository.save_session(user_id, 'waiting_for_product', {})
             user_states[user_id] = {'state': 'waiting_for_quantity', 'data': {
                 'product_id': product[0],
                 'product_name': product[1],
@@ -106,12 +108,27 @@ def callback_handler(call):
             else:
                 bot.answer_callback_query(
                     call.id, "لا يوجد منتجات مشابهة حالياً")
+    elif data.startswith("next_page_") or data.startswith("prev_page_"):
+        parts = data.split("_")
+        direction, page, query = parts[0], int(parts[2]), "_".join(parts[3:])
+
+        # Re-run search for products
+        products = productRepository.semantic_search(query)
+        if not products:
+            products = productRepository.search_products_by_name(query)
+
+        if products:
+            groupMessages.send_products_page(
+                bot, chat_id, products, page=page, query=query)
+        else:
+            bot.send_message(chat_id, "❌ لم يتم العثور على منتجات.")
 
 
 # === MAIN ===
 if __name__ == '__main__':
     print("Bot is running...")
     productRepository.init_db()
+    sessionRepository.init_session_db()
     # productRepository.insert_sample_products()  # Uncomment only on first run
     # send_offers()
     bot.infinity_polling()
