@@ -1,4 +1,5 @@
 import sessionRepository
+import googleSheetsRepository  # ✅ import new module
 
 
 def listCommand(message, bot, ADMIN_IDS: list[int], productRepository) -> None:
@@ -17,6 +18,7 @@ def listCommand(message, bot, ADMIN_IDS: list[int], productRepository) -> None:
 
 def privateMessageHandler(message, bot, ADMIN_IDS: list[int], productRepository, SHIPPING_FEE: float):
     user_id: int = message.from_user.id
+    username: str = message.from_user.username or "unknown"
     text: str = message.text.strip()
 
     # Ignore admins in private
@@ -64,5 +66,20 @@ def privateMessageHandler(message, bot, ADMIN_IDS: list[int], productRepository,
             f"✅ شكراً لك! تم تسجيل طلبك."
 
         bot.reply_to(message, confirmation)
+
+        # ✅ Save to Google Sheets
+        googleSheetsRepository.add_order({
+            "user_id": user_id,
+            "username": username,
+            "product_id": data['product_id'],
+            "product_name": data['product_name'],
+            "quantity": data['quantity'],
+            "price": data['price'],
+            "subtotal": subtotal,
+            "shipping_fee": SHIPPING_FEE,
+            "total": total,
+            "address": data['address']
+        })
+
         sessionRepository.delete_session(user_id)
         return
