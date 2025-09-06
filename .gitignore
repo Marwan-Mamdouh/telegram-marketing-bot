@@ -1,0 +1,4 @@
+.vscode/
+
+google_credentials.json
+*.env
