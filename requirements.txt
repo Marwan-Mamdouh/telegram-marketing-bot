@@ -3,3 +3,5 @@ dotenv
 rapidfuzz
 numpy
 sentence_transformers
+gspread
+oauth2client
